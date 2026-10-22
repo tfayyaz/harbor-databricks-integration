@@ -1,0 +1,17 @@
+[project]
+name = "harbor-databricks-integration"
+version = "0.1.0"
+description = "Run Harbor benchmarks with Databricks Model Serving, Unity AI Gateway, Genie Code and Managed MLflow"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "harbor==0.24.0",
+]
+
+# Item 1 needs the Genie Code agent from the fork. Uncomment one of these:
+# [tool.uv.sources]
+# harbor = { path = "../harbor", editable = true }
+# harbor = { git = "https://github.com/tfayyaz/harbor", branch = "add-genie-code-agent" }
+
+[tool.uv]
+package = false

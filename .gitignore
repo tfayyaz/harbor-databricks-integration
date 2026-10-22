@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+jobs/
+*.log
+.env
+.env.*
+*.p8
+*.pem
+*.key
+.databrickscfg
+connections.toml
+.DS_Store
+# Generated locally against a private package mirror; harbor is pinned in pyproject.toml
+uv.lock
