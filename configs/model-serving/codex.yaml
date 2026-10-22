@@ -9,6 +9,7 @@ agents:
   - import_path: databricks_agents:DatabricksCodex
     model_name: databricks-gpt-6-sol
     kwargs:
+      version: "0.163.0"  # tested; bump deliberately
       reasoning_effort: low
       # Databricks serves Responses over HTTPS only. Without a provider that
       # disables WebSockets, Codex spends ~100 s on reconnects before falling back.

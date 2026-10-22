@@ -9,6 +9,7 @@ agents:
   - import_path: databricks_agents:DatabricksClaudeCode
     model_name: databricks-claude-haiku-5-5
     kwargs:
+      version: "2.1.308"  # tested; bump deliberately
       # Databricks rejects the native web tools' beta tags.
       disallowed_tools: WebSearch,WebFetch
     env:

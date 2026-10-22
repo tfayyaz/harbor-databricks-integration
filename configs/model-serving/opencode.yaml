@@ -9,6 +9,8 @@ agents:
   # The openai provider uses @ai-sdk/openai, which calls the Responses API.
   - import_path: databricks_agents:DatabricksOpenCode
     model_name: openai/databricks-gpt-6-sol
+    kwargs:
+      version: "0.0.0-beta-202605152242"  # tested; bump deliberately
     env:
       OPENAI_API_KEY: minted-per-trial
       OPENAI_BASE_URL: __DATABRICKS_HOST__/serving-endpoints

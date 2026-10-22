@@ -9,6 +9,7 @@ agents:
   - import_path: databricks_agents:DatabricksPi
     model_name: openai/databricks-gpt-6-sol
     kwargs:
+      version: "1.2.0"  # tested; bump deliberately
       # gpt-6-sol rejects tools on /chat/completions unless reasoning is off.
       model_api: openai-responses
     env:

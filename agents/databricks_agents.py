@@ -59,8 +59,40 @@ class _FreshDatabricksToken:
         return dict(self._extra_env)  # type: ignore[attr-defined]
 
 
-class DatabricksClaudeCode(_FreshDatabricksToken, ClaudeCode):
+class _SkipUnusedAptNode:
+    """Don't install the distro's nodejs/npm when the agent installer won't use them.
+
+    On glibc images the stock Codex and OpenCode installers get Node 22 from nvm,
+    and Claude Code downloads a native binary, but Harbor still apt-installs
+    nodejs and npm first. On Ubuntu that is hundreds of packages and took 9-18 min
+    on EC2. musl images still get them, because nvm's Node can't run there.
+    """
+
+    async def _uses_packaged_node(self, environment: BaseEnvironment) -> bool:
+        result = await environment.exec(
+            command="ldd --version 2>&1 | grep -qi musl || [ -f /etc/alpine-release ]",
+            user="root",
+        )
+        return result.return_code == 0
+
+    async def ensure_system_dependencies(
+        self, environment: BaseEnvironment, dependencies: tuple[str, ...]
+    ) -> None:
+        if {"nodejs", "npm"} & set(dependencies) and not await self._uses_packaged_node(
+            environment
+        ):
+            dependencies = tuple(d for d in dependencies if d not in ("nodejs", "npm"))
+        await super().ensure_system_dependencies(environment, dependencies)  # type: ignore[misc]
+
+
+class DatabricksClaudeCode(_FreshDatabricksToken, _SkipUnusedAptNode, ClaudeCode):
     TOKEN_KEYS = ("ANTHROPIC_AUTH_TOKEN",)
+
+    async def _uses_packaged_node(self, environment: BaseEnvironment) -> bool:
+        # The npm-mirror install below runs on the distro's npm.
+        return bool(self._extra_env.get("NPM_CONFIG_REGISTRY")) or await super()._uses_packaged_node(
+            environment
+        )
 
     async def install(self, environment: BaseEnvironment) -> None:
         # The stock installer downloads the native binary from a CDN, which some
@@ -86,7 +118,7 @@ class DatabricksClaudeCode(_FreshDatabricksToken, ClaudeCode):
         )
 
 
-class DatabricksCodex(_FreshDatabricksToken, Codex):
+class DatabricksCodex(_FreshDatabricksToken, _SkipUnusedAptNode, Codex):
     TOKEN_KEYS = ("OPENAI_API_KEY",)
 
 
@@ -94,5 +126,5 @@ class DatabricksPi(_FreshDatabricksToken, Pi):
     TOKEN_KEYS = ("OPENAI_API_KEY",)
 
 
-class DatabricksOpenCode(_FreshDatabricksToken, OpenCode):
+class DatabricksOpenCode(_FreshDatabricksToken, _SkipUnusedAptNode, OpenCode):
     TOKEN_KEYS = ("OPENAI_API_KEY",)
