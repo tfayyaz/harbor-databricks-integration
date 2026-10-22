@@ -1,0 +1,19 @@
+name: item2-claude-code-smoke
+n_attempts: 1
+n_concurrent_trials: 1
+# Agent installs pull 100-200 MB (apt + npm); slow networks exceed the 360 s default.
+agent_setup_timeout_multiplier: 3
+environment:
+  type: docker
+agents:
+  - import_path: databricks_agents:DatabricksClaudeCode
+    model_name: databricks-claude-haiku-5-5
+    kwargs:
+      version: "2.1.308"  # tested; bump deliberately
+      # Databricks rejects the native web tools' beta tags.
+      disallowed_tools: WebSearch,WebFetch
+    env:
+      ANTHROPIC_AUTH_TOKEN: minted-per-trial
+      ANTHROPIC_BASE_URL: __DATABRICKS_HOST__/serving-endpoints/anthropic
+      ANTHROPIC_CUSTOM_HEADERS: "x-databricks-disable-beta-headers: true"
+      CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: "1"

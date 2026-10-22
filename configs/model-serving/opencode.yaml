@@ -1,0 +1,16 @@
+name: item2-opencode-smoke
+n_attempts: 1
+n_concurrent_trials: 1
+# Agent installs pull 100-200 MB (apt + npm); slow networks exceed the 360 s default.
+agent_setup_timeout_multiplier: 3
+environment:
+  type: docker
+agents:
+  # The openai provider uses @ai-sdk/openai, which calls the Responses API.
+  - import_path: databricks_agents:DatabricksOpenCode
+    model_name: openai/databricks-gpt-6-sol
+    kwargs:
+      version: "0.0.0-beta-202605152242"  # tested; bump deliberately
+    env:
+      OPENAI_API_KEY: minted-per-trial
+      OPENAI_BASE_URL: __DATABRICKS_HOST__/serving-endpoints

@@ -1,0 +1,28 @@
+name: item2-codex-smoke
+n_attempts: 1
+n_concurrent_trials: 1
+# Agent installs pull 100-200 MB (apt + npm); slow networks exceed the 360 s default.
+agent_setup_timeout_multiplier: 3
+environment:
+  type: docker
+agents:
+  - import_path: databricks_agents:DatabricksCodex
+    model_name: databricks-gpt-6-sol
+    kwargs:
+      version: "0.163.0"  # tested; bump deliberately
+      reasoning_effort: low
+      # Databricks serves Responses over HTTPS only. Without a provider that
+      # disables WebSockets, Codex spends ~100 s on reconnects before falling back.
+      config:
+        model_provider: databricks
+        model_providers:
+          databricks:
+            name: Databricks
+            base_url: __DATABRICKS_HOST__/serving-endpoints
+            env_key: OPENAI_API_KEY
+            wire_api: responses
+            supports_websockets: false
+            request_max_retries: 2
+            stream_max_retries: 2
+    env:
+      OPENAI_API_KEY: minted-per-trial
