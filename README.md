@@ -8,6 +8,8 @@ Recipes, agent adapters and tests for running [Harbor](https://github.com/harbor
 | 2 | Databricks Model Serving in Claude Code, Codex, Pi and OpenCode | Possible through each agent's generic custom-endpoint settings; nothing Databricks-specific | [docs/02-model-serving.md](docs/02-model-serving.md) | In progress |
 | 3 | Unity AI Gateway models in the same four agents | Not in Harbor; no issues or PRs | [docs/03-unity-ai-gateway.md](docs/03-unity-ai-gateway.md) | Not started |
 | 4 | Traces and results in Managed MLflow backed by Unity Catalog tables | `harbor-atif2otel` exports to open-source MLflow only | [docs/04-mlflow-uc.md](docs/04-mlflow-uc.md) | Not started |
+| 5 | Terminal-Bench 4 (`terminal-bench/terminal-bench`, 66 tasks; CPU-only subset of 63) with the item 2 agents | Published on the Harbor Hub | [docs/05-terminal-bench-4.md](docs/05-terminal-bench-4.md) | Not started |
+| 6 | data-eng-bench (`snowflake-labs/data-eng-bench`, 103 dbt tasks) on its public DuckDB backend with the item 2 agents | Published on the Harbor Hub | [docs/06-data-eng-bench.md](docs/06-data-eng-bench.md) | Not started |
 
 Each item is tested locally and on EC2, and the docs record the results.
 
@@ -22,6 +24,7 @@ configs/         Harbor job YAMLs, one directory per item
 mlflow/          item 4: MLflow/Unity Catalog uploader and results writer
 scripts/         run_local.sh, ec2_run.sh, token minting
 tasks/smoke/     tiny task that proves an agent can reach its model and write a file
+benchmarks/      benchmark-specific fetch scripts and job configs (items 5 and 6)
 docs/            one page per item: setup, local run, EC2 run, results
 ```
 
