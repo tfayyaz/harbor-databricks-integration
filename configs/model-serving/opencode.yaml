@@ -1,6 +1,8 @@
 name: item2-opencode-smoke
 n_attempts: 1
 n_concurrent_trials: 1
+# Agent installs pull 100-200 MB (apt + npm); slow networks exceed the 360 s default.
+agent_setup_timeout_multiplier: 3
 environment:
   type: docker
 agents:

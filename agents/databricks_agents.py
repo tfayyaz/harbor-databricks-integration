@@ -24,6 +24,7 @@ from harbor.agents.installed.claude_code import ClaudeCode
 from harbor.agents.installed.codex import Codex
 from harbor.agents.installed.opencode import OpenCode
 from harbor.agents.installed.pi import Pi
+from harbor.environments.base import BaseEnvironment
 
 TOKEN_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "databricks_token.sh"
 REFRESH_AFTER_SEC = 30 * 60
@@ -60,6 +61,29 @@ class _FreshDatabricksToken:
 
 class DatabricksClaudeCode(_FreshDatabricksToken, ClaudeCode):
     TOKEN_KEYS = ("ANTHROPIC_AUTH_TOKEN",)
+
+    async def install(self, environment: BaseEnvironment) -> None:
+        # The stock installer downloads the native binary from a CDN, which some
+        # networks cut off mid-transfer. With an npm mirror configured, install
+        # the npm package through it instead.
+        if not self._extra_env.get("NPM_CONFIG_REGISTRY"):
+            await super().install(environment)
+            return
+        if await self._installed_claude_satisfies_version(environment):
+            return
+        await self.ensure_system_dependencies(
+            environment, ("curl", "bash", "nodejs", "npm", "procps")
+        )
+        version = f"@{self._version}" if self._version else ""
+        await self.exec_as_agent(
+            environment,
+            command=(
+                "set -euo pipefail; "
+                f'npm install -g --prefix "$HOME/.local" @anthropic-ai/claude-code{version} && '
+                "echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc && "
+                'export PATH="$HOME/.local/bin:$PATH" && claude --version'
+            ),
+        )
 
 
 class DatabricksCodex(_FreshDatabricksToken, Codex):

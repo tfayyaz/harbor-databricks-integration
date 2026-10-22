@@ -5,10 +5,13 @@
 # value) and puts agents/ on PYTHONPATH. Agents mint their own token per trial
 # through databricks_token.sh, so export its token source (DATABRICKS_PROFILE
 # or the M2M variables). Job outputs go to $JOBS_DIR (default jobs/).
+# Variables in a gitignored .env.local at the repo root are loaded first.
 set -euo pipefail
 
 src=${1:?usage: run_local.sh <job.yaml> [harbor run args...]}; shift
 root=$(cd "$(dirname "$0")/.." && pwd)
+# Optional, gitignored network settings for this machine, e.g. NPM_CONFIG_REGISTRY.
+if [[ -f $root/.env.local ]]; then set -a; . "$root/.env.local"; set +a; fi
 host=${DATABRICKS_HOST:?DATABRICKS_HOST required, e.g. https://<workspace>.cloud.databricks.com}
 export DATABRICKS_HOST=${host%/}
 
