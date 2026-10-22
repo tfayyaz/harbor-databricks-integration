@@ -5,7 +5,7 @@ Recipes, agent adapters and tests for running [Harbor](https://github.com/harbor
 | # | Item | Harbor today | Docs | Status |
 |---|---|---|---|---|
 | 1 | Genie Code CLI as a Harbor installed agent, using models through Unity AI Gateway | Not in Harbor; no issues or PRs | [docs/01-genie-code.md](docs/01-genie-code.md) | Not started |
-| 2 | Databricks Model Serving in Claude Code, Codex, Pi and OpenCode | Possible through each agent's generic custom-endpoint settings; nothing Databricks-specific | [docs/02-model-serving.md](docs/02-model-serving.md) | In progress |
+| 2 | Databricks Model Serving in Claude Code, Codex, Pi and OpenCode | Possible through each agent's generic custom-endpoint settings; nothing Databricks-specific | [docs/02-model-serving.md](docs/02-model-serving.md) | Done: all four agents pass the smoke task locally and on EC2 (Harbor 0.24.0) |
 | 3 | Unity AI Gateway models in the same four agents | Not in Harbor; no issues or PRs | [docs/03-unity-ai-gateway.md](docs/03-unity-ai-gateway.md) | Not started |
 | 4 | Traces and results in Managed MLflow backed by Unity Catalog tables | `harbor-atif2otel` exports to open-source MLflow only | [docs/04-mlflow-uc.md](docs/04-mlflow-uc.md) | Not started |
 
