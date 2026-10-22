@@ -28,7 +28,7 @@ docs/            one page per item: setup, local run, EC2 run, results
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/) (all Python runs through `uv`)
-- Docker (Docker Desktop or Colima) for local runs
+- Docker for local runs. On macOS the runs here use [Colima](https://github.com/abiosoft/colima) (see below).
 - Databricks CLI with a configured profile
 - AWS CLI with SSO for EC2 runs
 
@@ -38,6 +38,22 @@ uv run harbor --version
 ```
 
 The Harbor version is pinned in `pyproject.toml`. Item 1 needs the Genie Code agent from the fork branch; switch to it with the commented `[tool.uv.sources]` entry.
+
+### Why Colima for local runs
+
+Harbor drives a Docker daemon through the standard `docker` and `docker compose` CLIs, so any Docker engine works. On macOS we use Colima because it is:
+- **Free and open source (MIT).** There's no Docker Desktop licence or sign-in, which matters for unattended and team use.
+- **Scriptable and sized to the workload.** It's CLI-only, and the Linux VM's CPU, memory and disk are set at start, for example `colima start --cpu 8 --memory 16 --disk 150`. Parallel trials need that headroom.
+- **Normal Docker storage.** Its VM uses overlay storage on ext4, so copy-on-write layers behave as on a Linux host, with no VFS-style write amplification. We checked this while measuring disk use per trial.
+- **Disposable.** `colima delete` resets the VM, images and build cache in one step.
+
+Gotchas:
+- Colima mounts only your home directory into the VM. Keep task and jobs directories under `$HOME`, not `/tmp`, or the verifier can't write its reward file.
+- `docker compose down` doesn't clear BuildKit's cache. Reclaim it with `docker builder prune -af` when disk runs low.
+
+### Local-only settings
+
+Package mirrors, proxies and other machine-specific settings go in `.env.local`, which is gitignored. Copy `.env.example` and fill it in; the scripts load it if it exists. Never put those values in committed files.
 
 ## Working on items in parallel
 
