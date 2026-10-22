@@ -1,0 +1,14 @@
+name: item2-pi-smoke
+n_attempts: 1
+n_concurrent_trials: 1
+environment:
+  type: docker
+agents:
+  - import_path: databricks_agents:DatabricksPi
+    model_name: openai/databricks-gpt-6-sol
+    kwargs:
+      # gpt-6-sol rejects tools on /chat/completions unless reasoning is off.
+      model_api: openai-responses
+    env:
+      OPENAI_API_KEY: minted-per-trial
+      OPENAI_BASE_URL: __DATABRICKS_HOST__/serving-endpoints
