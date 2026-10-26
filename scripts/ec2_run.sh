@@ -77,7 +77,7 @@ done
 remote=$(cat <<EOF
 set -euo pipefail
 export HOME=/root PATH=/root/.local/bin:/usr/local/bin:\$PATH AWS_REGION=$AWS_REGION
-dnf install -y -q docker jq tar gzip >/dev/null
+dnf install -y -q docker git jq tar gzip >/dev/null  # git: harbor -d downloads registry datasets
 systemctl enable --now docker
 # AL2023's docker has no compose plugin (Harbor needs it) and a buildx too old for compose builds.
 plugins=/usr/local/lib/docker/cli-plugins; mkdir -p \$plugins
