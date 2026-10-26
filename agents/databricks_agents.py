@@ -48,13 +48,20 @@ class _FreshDatabricksToken:
         token = subprocess.run(
             [str(TOKEN_SCRIPT)], check=True, capture_output=True, text=True
         ).stdout.strip()
+        if self._minted_at is not None and (previous := env.get(self.TOKEN_KEYS[0])):
+            # Harbor scrubs the jobs dir with the env it reads *after* the run,
+            # which can already hold a newer token. Keep earlier ones under a
+            # sensitive key so the token the agent actually used is scrubbed too.
+            # The container already had these, so this exposes nothing new.
+            n = sum(k.startswith("DATABRICKS_PREVIOUS_TOKEN_") for k in env)
+            env[f"DATABRICKS_PREVIOUS_TOKEN_{n}"] = previous
         for key in self.TOKEN_KEYS:
             env[key] = token
         self._minted_at = time.monotonic()
 
     @property
     def extra_env(self) -> dict[str, str]:
-        # Trial reads this when it scopes setup and run execs.
+        # Trial reads this for agent setup, the agent run, and the jobs-dir scrub.
         self._refresh_token()
         return dict(self._extra_env)  # type: ignore[attr-defined]
 
