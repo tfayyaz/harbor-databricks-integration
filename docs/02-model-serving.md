@@ -174,7 +174,47 @@ Final runs with the committed configs:
 | EC2 run 1 | 1.0 (714 s, 5 s) | **fail**: `AgentSetupTimeoutError` (1080 s) | 1.0 (37 s, 4 s) | 1.0 (516 s, 11 s) |
 | EC2 run 2, after skipping apt Node | 1.0 (24 s, 4 s) | 1.0 (22 s, 7 s) | 1.0 (66 s, 4 s) | 1.0 (30 s, 10 s) |
 
-Both EC2 workers were terminated and their buckets deleted. Afterwards no instances, volumes or buckets tagged `Item=2` remained.
+Both EC2 workers in this round were terminated and their buckets deleted. Afterwards no instances, volumes or buckets tagged `Item=2` remained.
+
+### EC2 re-check from a fresh clone (2026-10-26)
+
+Run from a fresh `git clone` of this branch, so only committed code was used (EC2, M2M, `m7i.xlarge`):
+
+| Run | Claude Code | Codex | Pi | OpenCode |
+|---|---|---|---|---|
+| `ec2_smoke.sh`-equivalent, one at a time | 1.0 (setup 21 s, run 5 s) | 1.0 (20 s, 6 s) | 1.0 (23 s, 3 s) | 1.0 (32 s, 6 s) |
+| 4 agents × 2 attempts, 4 trials at a time | 1.0, 1.0 | 1.0, 1.0 | 1.0, 1.0 | 1.0, 1.0 |
+
+12/12 passed, with no 401/403 and no token found in `jobs/`.
+
+### Long task: terminal-bench 2.0 `fix-ocaml-gc` (2026-10-26)
+
+A published Harbor task (`-d terminal-bench@2.0 -i fix-ocaml-gc`, rated hard, expert estimate 24 h, 60 min agent cap), all four agents at once on `m7i.2xlarge`:
+
+| Agent | Reward | Agent run time | Input / output tokens |
+|---|---|---|---|
+| Claude Code | 1.0 | 9 min 41 s | 736k / 10.8k |
+| Codex | 1.0 | 8 min 05 s | 2.5M / 4.6k |
+| Pi | 1.0 | 8 min 10 s | 159k / 1.4k |
+| OpenCode | 1.0 | 9 min 17 s | 373k / 1.4k |
+
+All four solved it in under 10 minutes, so this did not reach the 30-minute case. The first launch failed before any trial started because the worker had no `git` (`harbor run -d` downloads datasets with it). `ec2_run.sh` now installs it. That failed launch also confirmed that `ec2_run.sh` exits 1 when the remote command fails, while still copying results back and tearing down.
+
+### Long tasks: three more terminal-bench 2.0 tasks (2026-10-26)
+
+`install-windows-3.11` (hard, 60 min cap), `sam-cell-seg` (hard, 120 min cap) and `build-pov-ray` (200 min cap), with all four agents: 12 trials, 8 at a time on `m7i.4xlarge` (150 GB).
+
+| Task | Claude Code | Codex | Pi | OpenCode |
+|---|---|---|---|---|
+| `build-pov-ray` | 1.0 (1.5 min) | 1.0 (1.1 min) | 1.0 (2.2 min) | 1.0 (1.6 min) |
+| `install-windows-3.11` | 0.0 (16.7 min) | 0.0 (9.6 min) | 0.0 (5.6 min) | 0.0, `AgentTimeoutError` (60 min) |
+| `sam-cell-seg` | 0.0 (7.8 min) | 0.0 (0.9 min) | 0.0 (1.4 min) | 0.0 (2.5 min) |
+
+- The zeros are the agents not solving the task, not infrastructure failures. No agent log has a 401, 403, 429 or 5xx, and no file in the jobs dir holds a token.
+- OpenCode's 60-minute run is the only one past 30 minutes, and it does **not** show a token lasting 60 minutes of model calls. Its last model response came about 1 minute in: the model ran `nginx`, which never returned, and OpenCode waited on that shell command until the cap.
+- That run did take the scrub path after 30+ minutes, where `extra_env` mints a second token, and no token was found afterwards. That fits the scrub fix, but doesn't prove it: the agent may never have written its token to disk.
+
+**Still untested:** an agent making model calls for more than 30 minutes with one token. None of the 16 long-task runs did: 15 ended within 17 minutes, and the 16th (OpenCode) made its last model call about 1 minute in.
 
 Not run: the optional data-eng-bench check (step 5).
 
@@ -190,6 +230,8 @@ Not run: the optional data-eng-bench check (step 5).
 - **Setup timeout.** Configs set `agent_setup_timeout_multiplier: 3` (360 s → 1080 s) for slow networks.
 - **npm.** Where public npm is intercepted (`curl` TLS errors from containers), set `NPM_CONFIG_REGISTRY` in `.env.local`. The agent subclasses copy it into the agent env. EC2 workers use public npm.
 - **Token refresh** starts from `None`, not 0: a fresh EC2 worker's monotonic clock is near zero.
+- **One token per agent run.** Harbor reads the agent env at setup, at agent start and at the post-run jobs-dir scrub. The agent process keeps the token it got at start, so a single agent run longer than the token lifetime (about 1 h) fails, whatever the refresh interval. Split such work into `[[steps]]`.
+- **Scrub every minted token.** Harbor scrubs the jobs dir with the env it reads *after* the run. In the first version of `databricks_agents.py`, that read minted a new token after a 30+ minute run, so the token the agent had used was left in the logs. Earlier tokens are now kept under `DATABRICKS_PREVIOUS_TOKEN_<n>` so the scrub covers them. A simulated 40-minute trial fails on the old code and passes on the new.
 - **EBS.** Keep `VOLUME_GB` at 150 or below; 200 GB volumes were rejected by the account policy in earlier work. The default here is 60.
-- **Concurrency.** These runs used 1 trial at a time. Stay at 8 or fewer concurrent trials per endpoint.
+- **Concurrency.** 4 trials at a time passed on `m7i.xlarge`. Stay at 8 or fewer concurrent trials per endpoint.
 - **Colima disk.** A full Mac disk corrupted the Colima VM mid-session; see [colima.md](colima.md).
