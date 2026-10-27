@@ -4,7 +4,7 @@ Recipes, agent adapters and tests for running [Harbor](https://github.com/harbor
 
 | # | Item | Harbor today | Docs | Status |
 |---|---|---|---|---|
-| 1 | Genie Code CLI as a Harbor installed agent, using models through Unity AI Gateway | Not in Harbor; no issues or PRs | [docs/01-genie-code.md](docs/01-genie-code.md) | Not started |
+| 1 | Genie Code CLI as a Harbor installed agent, using models through Unity AI Gateway; Claude Code with the Databricks SQL and Genie One MCP servers | Genie Code: not in Harbor, added on the fork branch `add-genie-code-agent`. MCP: works with Harbor's `--mcp-config` | [docs/01-genie-code.md](docs/01-genie-code.md), [docs/01-claude-code-databricks-mcp.md](docs/01-claude-code-databricks-mcp.md) | Local runs done; EC2 not yet |
 | 2 | Databricks Model Serving in Claude Code, Codex, Pi and OpenCode | Possible through each agent's generic custom-endpoint settings; nothing Databricks-specific | [docs/02-model-serving.md](docs/02-model-serving.md) | In progress |
 | 3 | Unity AI Gateway models in the same four agents | Not in Harbor; no issues or PRs | [docs/03-unity-ai-gateway.md](docs/03-unity-ai-gateway.md) | Not started |
 | 4 | Traces and results in Managed MLflow backed by Unity Catalog tables | `harbor-atif2otel` exports to open-source MLflow only | [docs/04-mlflow-uc.md](docs/04-mlflow-uc.md) | Not started |
@@ -16,12 +16,14 @@ Each item is tested locally and on EC2, and the docs record the results.
 ```
 agents/          Harbor agent subclasses (per-trial token minting, gateway config)
 configs/         Harbor job YAMLs, one directory per item
-  genie-code/    item 1
+  genie-code/    item 1: genie-code runner
+  claude-code-mcp/ item 1: Claude Code with a Databricks MCP server
   model-serving/ item 2
   gateway/       item 3
 mlflow/          item 4: MLflow/Unity Catalog uploader and results writer
 scripts/         run_local.sh, ec2_run.sh, token minting
 tasks/smoke/     tiny task that proves an agent can reach its model and write a file
+tasks/databricks-mcp/ question on samples.tpch, answered through a Databricks MCP server
 docs/            one page per item: setup, local run, EC2 run, results
 ```
 
