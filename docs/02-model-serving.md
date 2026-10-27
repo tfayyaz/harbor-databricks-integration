@@ -14,7 +14,7 @@ Harbor 0.24.0 has no Databricks-specific code in these four agents. Each one rea
 | OpenCode | `databricks_agents:DatabricksOpenCode` | OpenAI Responses (`@ai-sdk/openai`) | `<host>/serving-endpoints` | `OPENAI_API_KEY` |
 
 - **Per-trial tokens.** [`agents/databricks_agents.py`](../agents/databricks_agents.py) subclasses the four stock agents. Before each trial it runs [`scripts/databricks_token.sh`](../scripts/databricks_token.sh) on the Harbor host and puts the token into the agent env, then refreshes it after 30 minutes. Jobs can therefore outlive the ~1 h token, and an M2M client secret never enters a task container. In the YAML the token key holds the placeholder `minted-per-trial`.
-- **Token sources** (first match wins): `DATABRICKS_M2M_SECRET_ID` (AWS Secrets Manager JSON `{host, client_id, client_secret}`, read with the EC2 instance role), `DATABRICKS_CLIENT_ID` + `DATABRICKS_CLIENT_SECRET` (OAuth M2M), or `DATABRICKS_PROFILE` (a CLI U2M profile, for local runs).
+- **Token sources** (first match wins): `DATABRICKS_PROFILE` (a CLI U2M profile, for local runs), `DATABRICKS_CLIENT_ID` + `DATABRICKS_CLIENT_SECRET` (OAuth M2M), or `DATABRICKS_M2M_SECRET_ID` (AWS Secrets Manager JSON `{host, client_id, client_secret}`, read with the EC2 instance role). An explicit U2M profile wins, so a `.env.local` that also holds the EC2 secret id keeps local runs on U2M. EC2 workers receive only `DATABRICKS_M2M_SECRET_ID`.
 - **Host rendering.** Harbor expands `${VAR}` only when it is the whole value, so `${DATABRICKS_HOST}/serving-endpoints` would reach the agent literally. The configs use `__DATABRICKS_HOST__`, which [`scripts/run_local.sh`](../scripts/run_local.sh) replaces before calling `harbor run`.
 - **Versions.** Each config pins the agent version that passed below. Bump it deliberately and rerun the smoke.
 
@@ -156,7 +156,7 @@ The worker installs Docker with the compose and buildx plugins, `uv`, and the Ha
 
 ## Results
 
-Smoke task: [`tasks/smoke`](../tasks/smoke) (write `/app/answer.txt` = `ok\n`), 1 attempt per agent, run one agent at a time. Harbor 0.24.0, run on 2026-10-22. Locally: macOS + Colima, U2M token. EC2: `m7i.xlarge` AL2023, OAuth M2M token from Secrets Manager. Every pass was checked in the agent log for real tool calls, a final model turn, and no 401/403.
+Smoke task: [`tasks/smoke`](../tasks/smoke) (write `/app/answer.txt` = `ok\n`), 1 attempt per agent, run one agent at a time. Harbor 0.24.0, run on 2026-10-22. Locally: macOS + Colima. Each agent's first local pass used the U2M token. Codex, Pi and OpenCode in the pinned all-four run, and the run after skipping apt Node, used an M2M token instead (the same service principal as EC2). `.env.local` also held `DATABRICKS_M2M_SECRET_ID`, which `databricks_token.sh` then checked first. It now checks `DATABRICKS_PROFILE` first. EC2: `m7i.xlarge` AL2023, OAuth M2M token from Secrets Manager. Every pass was checked in the agent log for real tool calls, a final model turn, and no 401/403.
 
 | Agent | Version | Model | Local | EC2 | Notes |
 |---|---|---|---|---|---|
