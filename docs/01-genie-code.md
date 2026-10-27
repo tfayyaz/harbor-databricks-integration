@@ -25,16 +25,21 @@ For Claude Code with the Databricks SQL and Genie One MCP servers, see [01-claud
 
 You need a Databricks workspace with Unity AI Gateway enabled and a Databricks CLI profile for it.
 
+`main` pins the released Harbor, which has no `genie-code` agent. Point `[tool.uv.sources]` in `pyproject.toml` at the fork, either a local clone or the branch on GitHub:
+
+```toml
+[tool.uv.sources]
+harbor = { path = "../harbor-add-genie-code-agent", editable = true }
+# or: harbor = { git = "https://github.com/tfayyaz/harbor", branch = "add-genie-code-agent" }
+```
+
 ```bash
-# The Harbor fork, next to this repo (pyproject.toml points at ../harbor-add-genie-code-agent)
-git clone -b add-genie-code-agent https://github.com/tfayyaz/harbor ../harbor-add-genie-code-agent
+git clone -b add-genie-code-agent https://github.com/tfayyaz/harbor ../harbor-add-genie-code-agent   # for the path source
 uv sync
 
 databricks auth profiles                 # pick a profile; always pass --profile
 export DATABRICKS_CONFIG_PROFILE=<profile>
 ```
-
-To use the fork without a local clone, switch `[tool.uv.sources]` in `pyproject.toml` to the commented `git` entry.
 
 ## Run locally
 
