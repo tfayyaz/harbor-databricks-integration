@@ -1,6 +1,6 @@
 # 1. Genie Code CLI with Unity AI Gateway
 
-Status: agent written and tested locally; EC2 run not done yet.
+Status: done. The agent passes the smoke task locally and on EC2.
 
 [Genie Code](https://github.com/databricks/genie-code-cli) (the `genie` command) is Databricks' terminal coding agent. It is built on the Codex CLI and gets its models from Unity AI Gateway. Harbor has no Genie Code agent, so this item adds one: `genie-code`, on the [`add-genie-code-agent`](https://github.com/tfayyaz/harbor/tree/add-genie-code-agent) branch of the Harbor fork (`src/harbor/agents/installed/genie_code.py`, 26 unit tests in `tests/unit/agents/installed/test_genie_code.py`).
 
@@ -66,20 +66,39 @@ If `docker run` fails with `input/output error` under `/var/lib/containerd`, the
 
 ## Run on EC2
 
-Not done yet for this item.
+[`configs/genie-code/ec2_run.sh`](../configs/genie-code/ec2_run.sh) is item 2's throwaway-worker runner with one change: `HARBOR_SPEC` (default: the fork branch), because `genie-code` is not in a Harbor release. It launches an Amazon Linux 2023 worker (default `m7i.xlarge`, 60 GB gp3, IMDSv2, no SSH key, no inbound rules), ships the given paths through a presigned S3 URL, runs the command over SSM with only the instance role's credentials, copies `jobs/` back, and terminates the instance and deletes the bucket, also on failure or Ctrl-C. The instance, volume and bucket are tagged `Project=harbor-databricks-integration`, `Item=1`, `Owner`, `CreatedBy`.
+
+Prerequisites, in env or a gitignored `.env.local`:
+- `EC2_INSTANCE_PROFILE`: a role with `AmazonSSMManagedInstanceCore` and `secretsmanager:GetSecretValue` on the M2M secret.
+- `DATABRICKS_M2M_SECRET_ID`: a Secrets Manager JSON `{host, client_id, client_secret}` for a service principal that can use Unity AI Gateway, Model Serving and the MCP servers.
+- `AWS_REGION`, and a default VPC subnet with outbound internet.
+
+[`configs/genie-code/ec2_item1.sh`](../configs/genie-code/ec2_item1.sh) is the worker command. It reads the secret with the instance role and runs `genie-code` on `tasks/smoke` with OAuth M2M (the agent mints a token per trial), then Claude Code with each MCP server on `tasks/databricks-mcp` with one token minted on the worker.
+
+```bash
+aws sts get-caller-identity               # check the account; aws sso login if expired
+set -a; . ./.env.local; set +a
+JOBS_DIR=$PWD/jobs/item1-ec2 WORKER_ENV="DATABRICKS_M2M_SECRET_ID=$DATABRICKS_M2M_SECRET_ID" \
+  configs/genie-code/ec2_run.sh configs/genie-code/ec2_item1.sh configs tasks pyproject.toml
+```
+
+Results land in `$JOBS_DIR/ec2-<stamp>/jobs/`.
 
 ## Results
 
-Smoke task [`tasks/smoke`](../tasks/smoke) (write `/app/answer.txt` = `ok\n`), one trial per model, Genie Code CLI 0.2.0, run locally on macOS + Colima with a U2M token on 2026-10-22.
+Smoke task [`tasks/smoke`](../tasks/smoke) (write `/app/answer.txt` = `ok\n`), one trial per model. Locally: macOS + Colima, U2M token, Genie Code CLI 0.2.0, 2026-10-22. EC2: `m7i.xlarge` Amazon Linux 2023, OAuth M2M from Secrets Manager, Genie Code CLI 0.2.1 (the latest release when the worker installed it), 2026-10-27.
 
-| Agent | Model | Local | EC2 | Agent setup | Agent run | Tokens in / out |
+| Agent | Model | Local | EC2 | Agent setup (local / EC2) | Agent run (local / EC2) | Tokens in / out (EC2) |
 |---|---|---|---|---|---|---|
-| `genie-code` | `databricks/gpt-5.4-mini` | Pass (1/1) | not run | 23 s | 7 s | 31,662 / 126 |
-| `genie-code` | `databricks/gpt-5.6-sol` | Pass (1/1) | not run | 21 s | 7 s | 27,132 / 77 |
+| `genie-code` | `databricks/gpt-5.4-mini` | Pass (1/1) | Pass (1/1) | 23 s / 50 s | 7 s / 6 s | 31,674 / 112 |
+| `genie-code` | `databricks/gpt-5.6-sol` | Pass (1/1) | Pass (1/1) | 21 s / 49 s | 7 s / 6 s | 27,137 / 82 |
+
+Each pass was checked in the trajectory for a real tool call (`apply_patch` or `exec`) and a final model turn. The EC2 worker was terminated and its bucket deleted; no token was found in the copied-back `jobs/`.
 
 ## Gotchas
 
 - **Unknown model names fall back silently.** Genie only runs models in its built-in catalog; any other `-m` value runs Genie's default. The agent detects this from the rollout and fails the trial.
 - **The model is set in `config.toml`**, which the agent writes; Genie's onboarding is skipped.
 - **No sandbox inside containers.** Genie's bwrap sandbox needs privileges an unprivileged container does not have, so the agent runs with `--dangerously-bypass-approvals-and-sandbox`.
+- **Pin the version for repeatable runs.** Without `--ak version=...` the agent installs the latest release (0.2.0 locally, 0.2.1 a few days later on EC2).
 - **One token per trial.** The token is minted when the trial starts and lasts about an hour.
