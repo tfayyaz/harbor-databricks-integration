@@ -1,6 +1,6 @@
 # Claude Code with the Databricks SQL and Genie One MCP servers
 
-Status: tested locally; EC2 run not done yet.
+Status: done. Both servers pass locally and on EC2.
 
 Claude Code can reach Databricks data through a Databricks managed MCP server instead of calling Databricks itself. Two servers are covered:
 
@@ -76,18 +76,20 @@ jq -r '.steps[] | select(.tool_calls) | .tool_calls[].function_name' jobs/item1-
 
 ## Run on EC2
 
-Not done yet.
+The item 1 EC2 run covers this too: [`configs/genie-code/ec2_item1.sh`](../configs/genie-code/ec2_item1.sh) mints one token on the worker from the M2M secret (instance role → Secrets Manager → `/oidc/v1/token`) and runs `configs/claude-code-mcp/run_local.sh` with `DATABRICKS_HOST` and `DATABRICKS_TOKEN` instead of a profile. See [01-genie-code.md](01-genie-code.md#run-on-ec2) for the command and prerequisites.
 
 ## Results
 
-`tasks/databricks-mcp`, one trial each, Claude Code 2.1.311 with `databricks-claude-opus-5-5`, run locally on macOS + Colima with a U2M token on 2026-10-27.
+`tasks/databricks-mcp`, one trial each, Claude Code 2.1.311 with `databricks-claude-opus-5-5`, 2026-10-27. Locally: macOS + Colima, U2M token. EC2: `m7i.xlarge` Amazon Linux 2023, OAuth M2M token from Secrets Manager.
 
-| MCP server | Reward | Tool calls | Agent run | Tokens in / out |
-|---|---|---|---|---|
-| Databricks SQL | 1.0 | `execute_sql_read_only`, then Bash to write the answer | 16 s | 83,297 / 350 |
-| Genie One | 1.0 | `genie_ask`, `genie_poll_response` ×2, then Bash to write the answer | 27 s | 151,090 / 741 |
+| MCP server | Where | Reward | Tool calls | Agent setup | Agent run | Tokens in / out |
+|---|---|---|---|---|---|---|
+| Databricks SQL | local | 1.0 | `execute_sql_read_only`, Bash (write the answer) | 5 min | 16 s | 83,297 / 350 |
+| Databricks SQL | EC2 | 1.0 | `execute_sql_read_only`, Bash | 146 s | 16 s | 83,362 / 377 |
+| Genie One | local | 1.0 | `genie_ask`, `genie_poll_response` ×2, Bash | 4 min | 27 s | 151,090 / 741 |
+| Genie One | EC2 | 1.0 | `genie_ask`, `genie_poll_response` ×4, Bash | 186 s | 39 s | 214,230 / 1,040 |
 
-Agent setup (installing Claude Code in the container) took 4–5 minutes on this network. In both runs the container got only `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_CUSTOM_HEADERS` and `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` as agent environment, and the MCP server's status was `connected`.
+Agent setup is installing Claude Code in the container. In every run the container got only `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_CUSTOM_HEADERS` and `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` as agent environment, and the MCP server's status was `connected`.
 
 The same setup also passed one migrated BIRD text-to-SQL task (`superhero__786`) with each server.
 
