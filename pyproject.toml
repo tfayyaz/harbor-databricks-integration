@@ -10,7 +10,7 @@ dependencies = [
 
 # Item 1 needs the Genie Code agent from the fork. Uncomment one of these:
 # [tool.uv.sources]
-# harbor = { path = "../harbor", editable = true }
+# harbor = { path = "../harbor-add-genie-code-agent", editable = true }
 # harbor = { git = "https://github.com/tfayyaz/harbor", branch = "add-genie-code-agent" }
 
 [tool.uv]
