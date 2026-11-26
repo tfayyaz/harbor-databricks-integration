@@ -76,7 +76,23 @@ jq -r '.steps[] | select(.tool_calls) | .tool_calls[].function_name' jobs/item1-
 
 ## Run on EC2
 
-The item 1 EC2 run covers this too: [`configs/genie-code/ec2_item1.sh`](../configs/genie-code/ec2_item1.sh) mints one token on the worker from the M2M secret (instance role → Secrets Manager → `/oidc/v1/token`) and runs `configs/claude-code-mcp/run_local.sh` with `DATABRICKS_HOST` and `DATABRICKS_TOKEN` instead of a profile. See [01-genie-code.md](01-genie-code.md#run-on-ec2) for the command and prerequisites.
+[`configs/claude-code-mcp/ec2_run.sh`](../configs/claude-code-mcp/ec2_run.sh) is item 2's throwaway-worker runner with `HARBOR_SPEC` added. It launches an Amazon Linux 2023 worker (default `m7i.xlarge`, 60 GB gp3, IMDSv2, no SSH key, no inbound rules), ships the given paths through a presigned S3 URL, runs the command over SSM with only the instance role's credentials, copies `jobs/` back, and terminates the instance and deletes the bucket, also on failure or Ctrl-C. The instance, volume and bucket are tagged `Project=harbor-databricks-integration`, `Item=1`, `Owner`, `CreatedBy`.
+
+Prerequisites, in env or a gitignored `.env.local`:
+- `EC2_INSTANCE_PROFILE`: a role with `AmazonSSMManagedInstanceCore` and `secretsmanager:GetSecretValue` on the M2M secret.
+- `DATABRICKS_M2M_SECRET_ID`: a Secrets Manager JSON `{host, client_id, client_secret}` for a service principal that can use Model Serving and the MCP servers.
+- `AWS_REGION`, and a default VPC subnet with outbound internet.
+
+[`configs/claude-code-mcp/ec2_mcp.sh`](../configs/claude-code-mcp/ec2_mcp.sh) is the worker command. It mints one token on the worker from the M2M secret (instance role → Secrets Manager → `/oidc/v1/token`) and runs `configs/claude-code-mcp/run_local.sh` for each MCP server with `DATABRICKS_HOST` and `DATABRICKS_TOKEN` instead of a profile.
+
+```bash
+aws sts get-caller-identity               # check the account; aws sso login if expired
+set -a; . ./.env.local; set +a
+JOBS_DIR=$PWD/jobs/item1-ec2 WORKER_ENV="DATABRICKS_M2M_SECRET_ID=$DATABRICKS_M2M_SECRET_ID" \
+  configs/claude-code-mcp/ec2_run.sh configs/claude-code-mcp/ec2_mcp.sh configs tasks pyproject.toml
+```
+
+Results land in `$JOBS_DIR/ec2-<stamp>/jobs/`.
 
 ## Results
 

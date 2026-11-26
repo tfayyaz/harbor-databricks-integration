@@ -2,17 +2,17 @@
 # Launch a throwaway EC2 worker, ship repo paths to it, run a command there with
 # M2M credentials only (instance role -> Secrets Manager), copy jobs back, tear down.
 #
-# Copy of item 2's scripts/ec2_run.sh with HARBOR_SPEC, so the worker can install
-# Harbor from the fork (genie-code is not in a Harbor release yet).
+# Copy of item 2's scripts/ec2_run.sh with HARBOR_SPEC, the Harbor version the
+# worker installs.
 #
-# Usage (from the repo root): configs/genie-code/ec2_run.sh "<command>" <path>...
+# Usage (from the repo root): configs/claude-code-mcp/ec2_run.sh "<command>" <path>...
 #   The paths are copied to /opt/run on the worker with their relative layout,
 #   and the command runs in /opt/run. Results: everything under /opt/run/jobs.
 # Env (defaults in brackets; a gitignored .env.local at the repo root is loaded first):
 #   EC2_INSTANCE_PROFILE  required; role needs SSM core + GetSecretValue on the M2M secret
 #   AWS_PROFILE, AWS_REGION [us-west-2], ITEM [1] (tag value)
 #   INSTANCE_TYPE [m7i.xlarge]  VOLUME_GB [60] (keep <= 150)
-#   HARBOR_SPEC [harbor @ git+https://github.com/tfayyaz/harbor@add-genie-code-agent]
+#   HARBOR_SPEC [harbor==0.24.0]
 #   WORKER_ENV  extra "K=V ..." exported for the command (e.g. secret ids)
 #   JOBS_DIR [jobs]  KEEP_INSTANCE [unset; 1 skips termination]  TIMEOUT_SEC [10800]
 set -euo pipefail
@@ -23,7 +23,7 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 if [[ -f $root/.env.local ]]; then set -a; . "$root/.env.local"; set +a; fi
 profile=${EC2_INSTANCE_PROFILE:?EC2_INSTANCE_PROFILE required}
 export AWS_REGION=${AWS_REGION:-us-west-2}
-harbor_spec=${HARBOR_SPEC:-harbor @ git+https://github.com/tfayyaz/harbor@add-genie-code-agent}
+harbor_spec=${HARBOR_SPEC:-harbor==0.24.0}
 timeout=${TIMEOUT_SEC:-10800}
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 out="${JOBS_DIR:-jobs}/ec2-$stamp"
